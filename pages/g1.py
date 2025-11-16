@@ -28,7 +28,7 @@ def render_g1(df_q):
     df_sel["年度"] = (df_sel["期順"] // 10).astype(int)
 
     if df_sel.empty:
-        st.warning(f"銘柄 {code} の四半期データがありません。")
+        st.warning(f"銘柄 {code} のデータがありません。")
         if st.button("↩ ダッシュボードに戻る"):
             st.session_state[SESSION_KEY_PAGE] = "dashboard"
         return
@@ -41,7 +41,7 @@ def render_g1(df_q):
 
     st.subheader(f"{code} {name} の業績推移")
 
-    with st.expander("四半期データをテーブル表示", expanded=False):
+    with st.expander("業績データをテーブル表示", expanded=False):
         cols = [
             "決算期",
             "決算期末日",
