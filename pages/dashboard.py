@@ -53,6 +53,6 @@ def render_dashboard(df_list, df_q):
     with cols[2]:
         st.metric("PBR", row.get("PBR", "N/A"))
 
-    if st.button("業績を見る (G1)"):
+    if st.button("業績を見る"):
         st.session_state[SESSION_KEY_PAGE] = "g1"
         st.session_state[SESSION_KEY_SELECTED_CODE] = selected_code

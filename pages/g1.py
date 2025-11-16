@@ -9,7 +9,7 @@ from data_loader import parse_period_to_order
 
 
 def render_g1(df_q):
-    st.title("G1: 業績グラフ")
+    st.title("業績グラフ")
 
     code = st.session_state.get(SESSION_KEY_SELECTED_CODE)
     if code is None:
@@ -113,7 +113,7 @@ def render_g1(df_q):
                 df_display[c] = pd.to_numeric(df_display[c], errors="coerce").round(1)
         st.dataframe(df_display, hide_index=True)
 
-    st.markdown("### 業績グラフ (G1)")
+    st.markdown("### 業績グラフ")
 
     col_interval, col_period = st.columns(2)
     with col_interval:
