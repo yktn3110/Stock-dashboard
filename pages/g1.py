@@ -50,6 +50,11 @@ def render_g1(df_q):
             "EPS（四半期）",
             "決算評価（◎○△×）",
             "メモ",
+            "売上高前年比",
+            "営業利益前年比",
+            "EPS前年比",
+            "売上進捗率",
+            "営業利益進捗率",
         ]
         cols = [c for c in cols if c in df_sel.columns]
         st.dataframe(df_sel[cols])
