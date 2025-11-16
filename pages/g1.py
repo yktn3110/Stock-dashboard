@@ -23,6 +23,7 @@ def render_g1(df_q):
         df_sel["期順"] = df_sel["決算期"].apply(parse_period_to_order)
 
     df_sel = df_sel[df_sel["期順"].notna()].sort_values("期順")
+    df_sel["年度"] = (df_sel["期順"] // 10).astype(int)
 
     if df_sel.empty:
         st.warning(f"銘柄 {code} の四半期データがありません。")
@@ -37,6 +38,22 @@ def render_g1(df_q):
         return
 
     st.subheader(f"{code} {name} の四半期業績")
+
+    col_period, col_interval = st.columns(2)
+    with col_period:
+        period_label = st.radio(
+            "表示期間",
+            ["1年", "3年", "5年"],
+            index=1,
+            horizontal=True,
+        )
+        display_years = int(period_label.replace("年", ""))
+    with col_interval:
+        interval_label = st.radio(
+            "表示区間",
+            ["四半期", "年度"],
+            horizontal=True,
+        )
 
     with st.expander("四半期データをテーブル表示", expanded=False):
         cols = [
@@ -53,11 +70,17 @@ def render_g1(df_q):
 
     st.markdown("### 四半期業績グラフ (G1)")
 
-    metric_map = {
+    quarterly_metric_map = {
         "売上高（四半期）": "売上高（四半期）",
         "営業利益（四半期）": "営業利益（四半期）",
         "EPS（四半期）": "EPS（四半期）",
     }
+    annual_metric_map = {
+        "売上高（通期）": "通期売上予想（実績）",
+        "営業利益（通期）": "通期営業利益予想",
+        "EPS（通期）": "通期EPS予想",
+    }
+    metric_map = annual_metric_map if interval_label == "年度" else quarterly_metric_map
 
     available_metrics = [label for label, col in metric_map.items() if col in df_sel.columns]
     if not available_metrics:
@@ -72,16 +95,33 @@ def render_g1(df_q):
     )
     metric_col = metric_map[metric_label]
 
-    x_col = "決算期末日" if "決算期末日" in df_sel.columns and df_sel["決算期末日"].notna().any() else "決算期"
     df_sel[metric_col] = pd.to_numeric(df_sel[metric_col], errors="coerce")
 
+    df_plot = df_sel.dropna(subset=[metric_col]).copy()
+    if interval_label == "年度":
+        # 年度表示時は通期の値を利用し、同一年度の最新四半期行を採用
+        df_plot = df_plot.sort_values(["年度", "期順"]).groupby("年度").tail(1)
+        x_col = "年度"
+    else:
+        x_col = "決算期" if "決算期" in df_plot.columns else "期順"
+
+    if not df_plot.empty:
+        last_year = int(df_plot["年度"].max())
+        start_year = last_year - display_years + 1
+        df_plot = df_plot[df_plot["年度"] >= start_year]
+        df_plot = df_plot.sort_values("期順")
+
+    if df_plot.empty:
+        st.warning("選択した表示期間と区間にデータはありません。")
+        return
+
     fig = px.line(
-        df_sel,
+        df_plot,
         x=x_col,
         y=metric_col,
         markers=True,
         title=f"{code} {name} - {metric_label} の推移",
     )
-    fig.update_layout(xaxis_title="決算期", yaxis_title=metric_label)
+    fig.update_layout(xaxis_title="決算期" if interval_label == "四半期" else "年度", yaxis_title=metric_label)
 
     st.plotly_chart(fig, use_container_width=True)
