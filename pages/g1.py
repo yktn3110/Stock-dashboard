@@ -26,6 +26,50 @@ def render_g1(df_q):
 
     df_sel = df_sel[df_sel["期順"].notna()].sort_values("期順")
     df_sel["年度"] = (df_sel["期順"] // 10).astype(int)
+    # 前年同四半期比較と通期進捗率を計算（分母欠損や0はNaNのまま）
+    if {"売上高（四半期）", "営業利益（四半期）", "EPS（四半期）"}.issubset(df_sel.columns):
+        df_tmp = df_sel.copy()
+        df_tmp["四半期番号"] = df_tmp["期順"] % 10
+
+        def yoy(current, prev):
+            if pd.isna(prev) or prev == 0:
+                return pd.NA
+            return (current - prev) / prev * 100
+
+        for src_col, dst_col in [
+            ("売上高（四半期）", "売上高前年比"),
+            ("営業利益（四半期）", "営業利益前年比"),
+            ("EPS（四半期）", "EPS前年比"),
+        ]:
+            if src_col not in df_tmp.columns:
+                continue
+            prev = (
+                df_tmp
+                .set_index(["年度", "四半期番号"])[src_col]
+                .reindex([(y - 1, q) for y, q in df_tmp[["年度", "四半期番号"]].to_records(index=False)])
+                .to_numpy()
+            )
+            df_tmp[dst_col] = [
+                yoy(cur, prv) if pd.notna(cur) else pd.NA
+                for cur, prv in zip(df_tmp[src_col].to_numpy(), prev)
+            ]
+
+        # 進捗率: 当年度の通期予想があれば累積実績で計算
+        for val_col, cum_col, target_col in [
+            ("売上高（四半期）", "売上累計", "売上進捗率"),
+            ("営業利益（四半期）", "営利累計", "営業利益進捗率"),
+        ]:
+            if val_col not in df_tmp.columns:
+                continue
+            df_tmp[cum_col] = df_tmp.groupby("年度")[val_col].cumsum()
+            total_col = "通期売上予想（実績）" if "売上" in val_col else "通期営業利益予想"
+            if total_col in df_tmp.columns:
+                total = df_tmp[total_col].to_numpy()
+                df_tmp[target_col] = [
+                    (cum / tgt * 100) if pd.notna(cum) and pd.notna(tgt) and tgt != 0 else pd.NA
+                    for cum, tgt in zip(df_tmp[cum_col].to_numpy(), total)
+                ]
+        df_sel = df_tmp.drop(columns=["四半期番号", "売上累計", "営利累計"], errors="ignore")
 
     if df_sel.empty:
         st.warning(f"銘柄 {code} のデータがありません。")
@@ -57,7 +101,18 @@ def render_g1(df_q):
             "営業利益進捗率",
         ]
         cols = [c for c in cols if c in df_sel.columns]
-        st.dataframe(df_sel[cols])
+        df_display = df_sel[cols].copy()
+        percent_cols = [
+            "売上高前年比",
+            "営業利益前年比",
+            "EPS前年比",
+            "売上進捗率",
+            "営業利益進捗率",
+        ]
+        for c in percent_cols:
+            if c in df_display.columns:
+                df_display[c] = pd.to_numeric(df_display[c], errors="coerce").round(1)
+        st.dataframe(df_display)
 
     st.markdown("### 業績グラフ (G1)")
 
