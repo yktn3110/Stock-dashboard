@@ -37,9 +37,9 @@ def render_g1(df_q):
             return (current - prev) / prev * 100
 
         for src_col, dst_col in [
-            ("売上高（四半期）", "売上高前年比"),
-            ("営業利益（四半期）", "営業利益前年比"),
-            ("EPS（四半期）", "EPS前年比"),
+            ("売上高（四半期）", "売上高前年比(%)"),
+            ("営業利益（四半期）", "営業利益前年比(%)"),
+            ("EPS（四半期）", "EPS前年比(%)"),
         ]:
             if src_col not in df_tmp.columns:
                 continue
@@ -56,8 +56,8 @@ def render_g1(df_q):
 
         # 進捗率: 当年度の通期予想があれば累積実績で計算
         for val_col, cum_col, target_col in [
-            ("売上高（四半期）", "売上累計", "売上進捗率"),
-            ("営業利益（四半期）", "営利累計", "営業利益進捗率"),
+            ("売上高（四半期）", "売上累計", "売上進捗率(%)"),
+            ("営業利益（四半期）", "営利累計", "営業利益進捗率(%)"),
         ]:
             if val_col not in df_tmp.columns:
                 continue
@@ -94,20 +94,20 @@ def render_g1(df_q):
             "EPS（四半期）",
             "決算評価（◎○△×）",
             "メモ",
-            "売上高前年比",
-            "営業利益前年比",
-            "EPS前年比",
-            "売上進捗率",
-            "営業利益進捗率",
+            "売上高前年比(%)",
+            "営業利益前年比(%)",
+            "EPS前年比(%)",
+            "売上進捗率(%)",
+            "営業利益進捗率(%)",
         ]
         cols = [c for c in cols if c in df_sel.columns]
         df_display = df_sel[cols].copy()
         percent_cols = [
-            "売上高前年比",
-            "営業利益前年比",
-            "EPS前年比",
-            "売上進捗率",
-            "営業利益進捗率",
+            "売上高前年比(%)",
+            "営業利益前年比(%)",
+            "EPS前年比(%)",
+            "売上進捗率(%)",
+            "営業利益進捗率(%)",
         ]
         for c in percent_cols:
             if c in df_display.columns:
