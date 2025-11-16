@@ -88,7 +88,6 @@ def render_g1(df_q):
     with st.expander("業績データをテーブル表示", expanded=False):
         cols = [
             "決算期",
-            "決算期末日",
             "売上高（四半期）",
             "営業利益（四半期）",
             "EPS（四半期）",
