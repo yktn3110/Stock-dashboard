@@ -3,6 +3,7 @@ import re
 
 import pandas as pd
 import streamlit as st
+from openpyxl import load_workbook
 
 from config import EXCEL_PATH
 
@@ -38,6 +39,40 @@ def load_data(excel_path: Path = EXCEL_PATH):
     xls = pd.ExcelFile(excel_path)
     df_list = pd.read_excel(xls, "銘柄一覧")
     df_q = pd.read_excel(xls, "業績")
+
+    # IRリンク列がハイパーリンクの場合にターゲットURLを補完し、http(s)以外は無効化
+    try:
+        # ハイパーリンク取得には read_only=False が必要
+        wb = load_workbook(excel_path, read_only=False, data_only=True)
+        if "業績" in wb.sheetnames:
+            ws = wb["業績"]
+            header = [cell.value for cell in next(ws.iter_rows(min_row=1, max_row=1))]
+            if "IRリンク" in header:
+                col_idx = header.index("IRリンク") + 1
+                links: list[str | None] = []
+
+                def normalize(link_val):
+                    if not link_val:
+                        return None
+                    s = str(link_val).strip()
+                    if s.startswith("#"):  # シート内リンクは除外
+                        return None
+                    if not s.lower().startswith(("http://", "https://")):
+                        return None
+                    return s
+
+                for row in ws.iter_rows(min_row=2, min_col=col_idx, max_col=col_idx):
+                    cell = row[0]
+                    link = None
+                    if cell.hyperlink:
+                        link = cell.hyperlink.target
+                    elif cell.value:
+                        link = cell.value
+                    links.append(normalize(link))
+                if len(links) == len(df_q):
+                    df_q["IRリンク"] = links
+    except Exception:
+        pass
 
     if "証券コード" in df_list.columns:
         df_list["証券コード"] = df_list["証券コード"].astype(str)

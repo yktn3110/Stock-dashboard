@@ -93,6 +93,7 @@ def render_g1(df_q):
             "EPS（四半期）",
             "決算評価（◎○△×）",
             "メモ",
+            "IRリンク",
             "売上高前年比(%)",
             "営業利益前年比(%)",
             "EPS前年比(%)",
@@ -111,7 +112,15 @@ def render_g1(df_q):
         for c in percent_cols:
             if c in df_display.columns:
                 df_display[c] = pd.to_numeric(df_display[c], errors="coerce").round(1)
-        st.dataframe(df_display, hide_index=True)
+        column_config = {}
+        if "IRリンク" in df_display.columns:
+            column_config["IRリンク"] = st.column_config.LinkColumn("IRリンク", display_text="IRリンク")
+        st.data_editor(
+            df_display,
+            hide_index=True,
+            column_config=column_config,
+            disabled=df_display.columns.tolist(),
+        )
 
     st.markdown("### 業績グラフ")
 
