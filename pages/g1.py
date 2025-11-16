@@ -41,22 +41,6 @@ def render_g1(df_q):
 
     st.subheader(f"{code} {name} の業績推移")
 
-    col_period, col_interval = st.columns(2)
-    with col_period:
-        period_label = st.radio(
-            "表示期間",
-            ["1年", "3年", "5年"],
-            index=1,
-            horizontal=True,
-        )
-        display_years = int(period_label.replace("年", ""))
-    with col_interval:
-        interval_label = st.radio(
-            "表示区間",
-            ["四半期", "年度"],
-            horizontal=True,
-        )
-
     with st.expander("四半期データをテーブル表示", expanded=False):
         cols = [
             "決算期",
@@ -71,6 +55,22 @@ def render_g1(df_q):
         st.dataframe(df_sel[cols])
 
     st.markdown("### 業績グラフ (G1)")
+
+    col_interval, col_period = st.columns(2)
+    with col_interval:
+        interval_label = st.radio(
+            "表示区間",
+            ["四半期", "年度"],
+            horizontal=True,
+        )
+    with col_period:
+        period_label = st.radio(
+            "表示期間",
+            ["1年", "3年", "5年"],
+            index=1,
+            horizontal=True,
+        )
+        display_years = int(period_label.replace("年", ""))
 
     quarterly_metric_map = {
         "売上高（四半期）": "売上高（四半期）",
