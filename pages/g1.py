@@ -7,7 +7,7 @@ from data_loader import parse_period_to_order
 
 
 def render_g1(df_q):
-    st.title("G1: 四半期業績ビュー")
+    st.title("G1: 業績グラフ")
 
     code = st.session_state.get(SESSION_KEY_SELECTED_CODE)
     if code is None:
@@ -37,7 +37,7 @@ def render_g1(df_q):
         st.session_state[SESSION_KEY_PAGE] = "dashboard"
         return
 
-    st.subheader(f"{code} {name} の四半期業績")
+    st.subheader(f"{code} {name} の業績推移")
 
     col_period, col_interval = st.columns(2)
     with col_period:
@@ -68,7 +68,7 @@ def render_g1(df_q):
         cols = [c for c in cols if c in df_sel.columns]
         st.dataframe(df_sel[cols])
 
-    st.markdown("### 四半期業績グラフ (G1)")
+    st.markdown("### 業績グラフ (G1)")
 
     quarterly_metric_map = {
         "売上高（四半期）": "売上高（四半期）",
