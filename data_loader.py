@@ -34,10 +34,10 @@ def parse_period_to_order(s: str | None) -> int | None:
 
 @st.cache_data(show_spinner=False)
 def load_data(excel_path: Path = EXCEL_PATH):
-    """Excel の銘柄一覧・四半期業績を読み込む。"""
+    """Excel の銘柄一覧・業績を読み込む。"""
     xls = pd.ExcelFile(excel_path)
     df_list = pd.read_excel(xls, "銘柄一覧")
-    df_q = pd.read_excel(xls, "四半期業績")
+    df_q = pd.read_excel(xls, "業績")
 
     if "証券コード" in df_list.columns:
         df_list["証券コード"] = df_list["証券コード"].astype(str)
