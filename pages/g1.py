@@ -1,6 +1,8 @@
 ﻿import pandas as pd
 import plotly.express as px
+import plotly.graph_objects as go
 import streamlit as st
+from plotly.subplots import make_subplots
 
 from config import SESSION_KEY_PAGE, SESSION_KEY_SELECTED_CODE
 from data_loader import parse_period_to_order
@@ -87,17 +89,27 @@ def render_g1(df_q):
         st.error("表示できる数値データがありません。")
         return
 
-    metric_label = st.radio(
-        "表示する指標を選択",
-        available_metrics,
-        index=min(1, len(available_metrics) - 1),
-        horizontal=True,
-    )
-    metric_col = metric_map[metric_label]
+    default_selection = available_metrics[:2] if len(available_metrics) >= 2 else available_metrics
 
-    df_sel[metric_col] = pd.to_numeric(df_sel[metric_col], errors="coerce")
+    st.write("表示する指標を選択（トグルで複数可）")
+    toggle_cols = st.columns(min(4, len(available_metrics)) or 1)
+    selected_metrics: list[str] = []
+    for idx, label in enumerate(available_metrics):
+        col = toggle_cols[idx % len(toggle_cols)]
+        with col:
+            on_by_default = label in default_selection
+            if st.toggle(label, value=on_by_default, key=f"metric_toggle_{label}"):
+                selected_metrics.append(label)
 
-    df_plot = df_sel.dropna(subset=[metric_col]).copy()
+    if not selected_metrics:
+        st.info("表示する指標を選んでください。")
+        return
+
+    selected_cols = [metric_map[label] for label in selected_metrics]
+    for col in selected_cols:
+        df_sel[col] = pd.to_numeric(df_sel[col], errors="coerce")
+
+    df_plot = df_sel.dropna(subset=selected_cols, how="all").copy()
     if interval_label == "年度":
         # 年度表示時は通期の値を利用し、同一年度の最新四半期行を採用
         df_plot = df_plot.sort_values(["年度", "期順"]).groupby("年度").tail(1)
@@ -106,22 +118,44 @@ def render_g1(df_q):
         x_col = "決算期" if "決算期" in df_plot.columns else "期順"
 
     if not df_plot.empty:
-        last_year = int(df_plot["年度"].max())
-        start_year = last_year - display_years + 1
-        df_plot = df_plot[df_plot["年度"] >= start_year]
+        if interval_label == "年度":
+            last_year = int(df_plot["年度"].max())
+            start_year = last_year - display_years + 1
+            df_plot = df_plot[df_plot["年度"] >= start_year]
+        else:
+            # 四半期表示時は最新期順から年数分×4四半期を表示
+            last_order = int(df_plot["期順"].max())
+            start_order = last_order - display_years * 4 + 1
+            df_plot = df_plot[df_plot["期順"] >= start_order]
         df_plot = df_plot.sort_values("期順")
 
     if df_plot.empty:
         st.warning("選択した表示期間と区間にデータはありません。")
         return
 
-    fig = px.line(
-        df_plot,
-        x=x_col,
-        y=metric_col,
-        markers=True,
-        title=f"{code} {name} - {metric_label} の推移",
+    fig = make_subplots(specs=[[{"secondary_y": True}]])
+
+    for idx, label in enumerate(selected_metrics):
+        col = metric_map[label]
+        fig.add_trace(
+            go.Scatter(
+                x=df_plot[x_col],
+                y=df_plot[col],
+                mode="lines+markers",
+                name=label,
+            ),
+            secondary_y=idx > 0,
+        )
+
+    primary_title = selected_metrics[0]
+    secondary_title = selected_metrics[1] if len(selected_metrics) > 1 else None
+    fig.update_layout(
+        title=f"{code} {name} - 指標推移",
+        xaxis_title="決算期" if interval_label == "四半期" else "年度",
+        legend_title="指標",
     )
-    fig.update_layout(xaxis_title="決算期" if interval_label == "四半期" else "年度", yaxis_title=metric_label)
+    fig.update_yaxes(title_text=primary_title, secondary_y=False)
+    if secondary_title:
+        fig.update_yaxes(title_text=secondary_title, secondary_y=True)
 
     st.plotly_chart(fig, use_container_width=True)
