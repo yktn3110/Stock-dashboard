@@ -100,7 +100,7 @@ def render_g1(df_q):
             "営業利益進捗率(%)",
         ]
         cols = [c for c in cols if c in df_sel.columns]
-        df_display = df_sel[cols].copy()
+        df_display = df_sel.sort_values("期順", ascending=False)[cols].copy()
         percent_cols = [
             "売上高前年比(%)",
             "営業利益前年比(%)",
@@ -111,7 +111,7 @@ def render_g1(df_q):
         for c in percent_cols:
             if c in df_display.columns:
                 df_display[c] = pd.to_numeric(df_display[c], errors="coerce").round(1)
-        st.dataframe(df_display)
+        st.dataframe(df_display, hide_index=True)
 
     st.markdown("### 業績グラフ (G1)")
 
