@@ -195,22 +195,29 @@ def render_g1(df_q):
     fig = make_subplots(specs=[[{"secondary_y": True}]])
     memo_values = None
     if "メモ" in df_plot.columns:
-        memo_values = df_plot["メモ"].fillna("").to_numpy()
+        memo_values = df_plot["メモ"].fillna("").replace("", pd.NA).to_numpy()
 
     for idx, label in enumerate(selected_metrics):
         col = metric_map[label]
+        hovertext = None
+        if memo_values is not None:
+            xs = df_plot[x_col].to_numpy()
+            ys = df_plot[col].to_numpy()
+            hovertext = []
+            for x_val, y_val, m in zip(xs, ys, memo_values):
+                base = f"{x_col}={x_val}<br>{label}={y_val}"
+                if pd.notna(m):
+                    base += f"<br>メモ={m}"
+                hovertext.append(base)
+
         fig.add_trace(
             go.Scatter(
                 x=df_plot[x_col],
                 y=df_plot[col],
                 mode="lines+markers",
                 name=label,
-                customdata=memo_values if memo_values is not None else None,
-                hovertemplate=(
-                    f"{x_col}=%{{x}}<br>{label}=%{{y}}<br>メモ=%{{customdata}}<extra></extra>"
-                    if memo_values is not None
-                    else None
-                ),
+                text=hovertext,
+                hovertemplate="%{text}<extra></extra>" if hovertext is not None else None,
             ),
             secondary_y=idx > 0,
         )
