@@ -193,6 +193,9 @@ def render_g1(df_q):
         return
 
     fig = make_subplots(specs=[[{"secondary_y": True}]])
+    memo_values = None
+    if "メモ" in df_plot.columns:
+        memo_values = df_plot["メモ"].fillna("").to_numpy()
 
     for idx, label in enumerate(selected_metrics):
         col = metric_map[label]
@@ -202,6 +205,12 @@ def render_g1(df_q):
                 y=df_plot[col],
                 mode="lines+markers",
                 name=label,
+                customdata=memo_values if memo_values is not None else None,
+                hovertemplate=(
+                    f"{x_col}=%{{x}}<br>{label}=%{{y}}<br>メモ=%{{customdata}}<extra></extra>"
+                    if memo_values is not None
+                    else None
+                ),
             ),
             secondary_y=idx > 0,
         )
