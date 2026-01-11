@@ -2,8 +2,8 @@
 
 from config import DEFAULT_PAGE, EXCEL_PATH, SESSION_KEY_PAGE
 from data_loader import load_data
-from pages.dashboard import render_dashboard
-from pages.g1 import render_g1
+from views.dashboard import render_dashboard
+from views.g1 import render_g1
 
 
 def main():
