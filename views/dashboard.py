@@ -10,7 +10,14 @@ def render_dashboard(df_list, df_q):
     df_view = df_list.copy()
 
     st.subheader("銘柄一覧")
-    st.dataframe(df_view)
+    table_selection = st.dataframe(
+        df_view,
+        use_container_width=True,
+        hide_index=True,
+        on_select="rerun",
+        selection_mode="single-row",
+        key="list_table",
+    )
 
     st.markdown("### 詳細を見たい銘柄を選択")
 
@@ -18,8 +25,19 @@ def render_dashboard(df_list, df_q):
         st.info("条件に合う銘柄がありません。フィルタを調整してください。")
         return
 
-    codes = df_view["証券コード"].unique()
-    selected_code = st.selectbox("証券コード", codes)
+    if table_selection and table_selection.selection.rows:
+        row_idx = table_selection.selection.rows[0]
+        selected_code_from_table = df_view.iloc[row_idx]["証券コード"]
+        st.session_state[SESSION_KEY_SELECTED_CODE] = selected_code_from_table
+
+    codes = df_view["証券コード"].unique().tolist()
+    if (
+        SESSION_KEY_SELECTED_CODE not in st.session_state
+        or st.session_state[SESSION_KEY_SELECTED_CODE] not in codes
+    ):
+        st.session_state[SESSION_KEY_SELECTED_CODE] = codes[0]
+
+    selected_code = st.selectbox("証券コード", codes, key=SESSION_KEY_SELECTED_CODE)
 
     row = df_list[df_list["証券コード"] == selected_code].iloc[0]
     name = row.get("銘柄名", "")
@@ -41,4 +59,3 @@ def render_dashboard(df_list, df_q):
 
     if st.button("業績を見る"):
         st.session_state[SESSION_KEY_PAGE] = "g1"
-        st.session_state[SESSION_KEY_SELECTED_CODE] = selected_code
