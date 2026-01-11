@@ -5,6 +5,7 @@ from data_loader import load_data
 from views.dashboard import render_dashboard
 from views.g1 import render_g1
 
+st.set_page_config(layout="wide")
 
 def main():
     if not EXCEL_PATH.exists():
