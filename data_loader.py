@@ -4,6 +4,7 @@ import re
 import pandas as pd
 import streamlit as st
 from openpyxl import load_workbook
+import requests
 
 from config import EXCEL_PATH
 
@@ -91,3 +92,56 @@ def load_data(excel_path: Path = EXCEL_PATH):
         df_q = df_q.sort_values(["証券コード", "決算期末日"])
 
     return df_list, df_q
+
+
+def normalize_ticker(code: str | int | None) -> str | None:
+    if code is None:
+        return None
+    text = str(code).strip()
+    if not text:
+        return None
+    if text.endswith(".T"):
+        return text
+    return f"{text}.T"
+
+
+@st.cache_data(show_spinner=False, ttl=60)
+def get_json_data(ticker: str):
+    """
+    指定されたティッカーのJSONデータを取得する関数。
+    """
+    url = (
+        "https://query1.finance.yahoo.com/v7/finance/chart/"
+        f"{ticker}?range=7d&interval=1m&indicators=quote&includeTimestamps=true"
+    )
+    headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"}
+    try:
+        response = requests.get(url, headers=headers, timeout=5)
+    except requests.RequestException:
+        return None
+
+    if response.status_code != 200:
+        return None
+    try:
+        return response.json()
+    except ValueError:
+        return None
+
+
+def get_current_price(ticker: str | None) -> float | None:
+    if not ticker:
+        return None
+    data = get_json_data(ticker)
+    if not data:
+        return None
+    result = data.get("chart", {}).get("result")
+    if not result:
+        return None
+    meta = result[0].get("meta", {})
+    price = meta.get("regularMarketPrice")
+    if price is None:
+        return None
+    try:
+        return float(price)
+    except (TypeError, ValueError):
+        return None
