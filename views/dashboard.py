@@ -59,3 +59,4 @@ def render_dashboard(df_list, df_q):
 
     if st.button("業績を見る"):
         st.session_state[SESSION_KEY_PAGE] = "g1"
+        st.rerun()

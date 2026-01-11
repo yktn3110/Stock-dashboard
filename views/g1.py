@@ -1,4 +1,4 @@
-﻿import pandas as pd
+import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 import streamlit as st
@@ -16,6 +16,7 @@ def render_g1(df_q):
         st.warning("銘柄が選択されていません。ダッシュボードから銘柄を選んでください。")
         if st.button("↩ ダッシュボードに戻る"):
             st.session_state[SESSION_KEY_PAGE] = "dashboard"
+            st.rerun()
         return
 
     df_sel = df_q[df_q["証券コード"] == code].copy()
@@ -75,12 +76,14 @@ def render_g1(df_q):
         st.warning(f"銘柄 {code} のデータがありません。")
         if st.button("↩ ダッシュボードに戻る"):
             st.session_state[SESSION_KEY_PAGE] = "dashboard"
+            st.rerun()
         return
 
     name = df_sel["銘柄名"].iloc[0] if "銘柄名" in df_sel.columns else ""
 
     if st.button("↩ ダッシュボードに戻る"):
         st.session_state[SESSION_KEY_PAGE] = "dashboard"
+        st.rerun()
         return
 
     st.subheader(f"{code} {name} の業績推移")
