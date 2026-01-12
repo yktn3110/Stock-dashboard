@@ -95,7 +95,7 @@ def load_data(excel_path: Path = EXCEL_PATH):
 
 
 def update_latest_announcement(excel_path: Path = EXCEL_PATH) -> tuple[bool, str | None]:
-    """業績シートの最新決算発表日を銘柄一覧に反映する。"""
+    """業績シートの最新決算発表日とYoYを銘柄一覧に反映する。"""
     if not excel_path.exists():
         return False, f"Excel ファイルが見つかりません: {excel_path}"
 
@@ -115,6 +115,7 @@ def update_latest_announcement(excel_path: Path = EXCEL_PATH) -> tuple[bool, str
         return False, "業績シートに有効な決算発表日がありません。"
 
     latest_by_code = df_q.groupby("証券コード")["決算発表日"].max()
+    df_q["期順"] = df_q["決算期"].apply(parse_period_to_order)
 
     try:
         wb = load_workbook(excel_path, read_only=False, data_only=True)
@@ -128,11 +129,49 @@ def update_latest_announcement(excel_path: Path = EXCEL_PATH) -> tuple[bool, str
 
     ws = wb["銘柄一覧"]
     header = [cell.value for cell in next(ws.iter_rows(min_row=1, max_row=1))]
-    if "証券コード" not in header or "最新決算発表" not in header:
-        return False, "銘柄一覧シートに必要な列（証券コード/最新決算発表）がありません。"
+    required_list_cols = {"証券コード", "最新決算発表", "売上高前年比", "営業利益前年比"}
+    if not required_list_cols.issubset(header):
+        return False, "銘柄一覧シートに必要な列がありません。"
 
     code_idx = header.index("証券コード") + 1
     latest_idx = header.index("最新決算発表") + 1
+    sales_yoy_idx = header.index("売上高前年比") + 1
+    op_yoy_idx = header.index("営業利益前年比") + 1
+
+    yoy_by_code: dict[str, tuple[float | None, float | None]] = {}
+    for code, latest_date in latest_by_code.items():
+        df_code = df_q[df_q["証券コード"] == code].copy()
+        df_latest = df_code[df_code["決算発表日"] == latest_date]
+        if df_latest.empty:
+            yoy_by_code[code] = (None, None)
+            continue
+        latest_row = df_latest.iloc[0]
+        latest_order = parse_period_to_order(latest_row.get("決算期"))
+        if latest_order is None:
+            yoy_by_code[code] = (None, None)
+            continue
+        year = latest_order // 10
+        prev_order = (year - 1) * 10 + 4
+        df_prev = df_code[df_code["期順"] == prev_order]
+        if df_prev.empty:
+            yoy_by_code[code] = (None, None)
+            continue
+        prev_row = df_prev.iloc[0]
+
+        def calc_yoy(current, prev):
+            if pd.isna(prev) or prev == 0 or pd.isna(current):
+                return None
+            return (current - prev) / prev * 100
+
+        sales_yoy = calc_yoy(
+            latest_row.get("売上高（四半期）"),
+            prev_row.get("売上高（四半期）"),
+        )
+        op_yoy = calc_yoy(
+            latest_row.get("営業利益（四半期）"),
+            prev_row.get("営業利益（四半期）"),
+        )
+        yoy_by_code[code] = (sales_yoy, op_yoy)
 
     updated = 0
     for row in ws.iter_rows(min_row=2):
@@ -145,6 +184,15 @@ def update_latest_announcement(excel_path: Path = EXCEL_PATH) -> tuple[bool, str
             cell.value = latest_by_code[code_str].to_pydatetime()
             cell.number_format = "yyyy/mm/dd"
             updated += 1
+            sales_yoy, op_yoy = yoy_by_code.get(code_str, (None, None))
+            if sales_yoy is not None:
+                cell_sales = row[sales_yoy_idx - 1]
+                cell_sales.value = round(float(sales_yoy), 1)
+                cell_sales.number_format = "0.0"
+            if op_yoy is not None:
+                cell_op = row[op_yoy_idx - 1]
+                cell_op.value = round(float(op_yoy), 1)
+                cell_op.number_format = "0.0"
 
     try:
         wb.save(excel_path)
