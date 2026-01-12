@@ -1,3 +1,4 @@
+import pandas as pd
 import streamlit as st
 
 from config import SESSION_KEY_PAGE, SESSION_KEY_SELECTED_CODE
@@ -8,6 +9,11 @@ def render_dashboard(df_list, df_q):
     st.title("銘柄ダッシュボード")
 
     df_view = df_list.copy()
+    if "最新決算発表" in df_view.columns:
+        df_view["最新決算発表"] = (
+            pd.to_datetime(df_view["最新決算発表"], errors="coerce")
+            .dt.strftime("%Y/%m/%d")
+        )
 
     st.subheader("銘柄一覧")
     table_selection = st.dataframe(

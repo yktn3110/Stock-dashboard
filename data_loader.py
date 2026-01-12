@@ -94,6 +94,68 @@ def load_data(excel_path: Path = EXCEL_PATH):
     return df_list, df_q
 
 
+def update_latest_announcement(excel_path: Path = EXCEL_PATH) -> tuple[bool, str | None]:
+    """業績シートの最新決算発表日を銘柄一覧に反映する。"""
+    if not excel_path.exists():
+        return False, f"Excel ファイルが見つかりません: {excel_path}"
+
+    try:
+        df_q = pd.read_excel(excel_path, "業績")
+    except Exception:
+        return False, "業績シートの読み込みに失敗しました。"
+
+    required_cols = {"証券コード", "決算発表日"}
+    if not required_cols.issubset(df_q.columns):
+        return False, "業績シートに必要な列（証券コード/決算発表日）がありません。"
+
+    df_q["証券コード"] = df_q["証券コード"].astype(str)
+    df_q["決算発表日"] = pd.to_datetime(df_q["決算発表日"], errors="coerce")
+    df_q = df_q.dropna(subset=["証券コード", "決算発表日"])
+    if df_q.empty:
+        return False, "業績シートに有効な決算発表日がありません。"
+
+    latest_by_code = df_q.groupby("証券コード")["決算発表日"].max()
+
+    try:
+        wb = load_workbook(excel_path, read_only=False, data_only=True)
+    except PermissionError:
+        return False, f"Excel を開いているため更新をスキップしました: {excel_path}"
+    except Exception:
+        return False, "Excel ファイルの読み込みに失敗しました。"
+
+    if "銘柄一覧" not in wb.sheetnames:
+        return False, "銘柄一覧シートが見つかりません。"
+
+    ws = wb["銘柄一覧"]
+    header = [cell.value for cell in next(ws.iter_rows(min_row=1, max_row=1))]
+    if "証券コード" not in header or "最新決算発表" not in header:
+        return False, "銘柄一覧シートに必要な列（証券コード/最新決算発表）がありません。"
+
+    code_idx = header.index("証券コード") + 1
+    latest_idx = header.index("最新決算発表") + 1
+
+    updated = 0
+    for row in ws.iter_rows(min_row=2):
+        code_val = row[code_idx - 1].value
+        if code_val is None:
+            continue
+        code_str = str(code_val)
+        if code_str in latest_by_code:
+            cell = row[latest_idx - 1]
+            cell.value = latest_by_code[code_str].to_pydatetime()
+            cell.number_format = "yyyy/mm/dd"
+            updated += 1
+
+    try:
+        wb.save(excel_path)
+    except PermissionError:
+        return False, f"Excel を開いているため更新をスキップしました: {excel_path}"
+    except Exception:
+        return False, "Excel ファイルの保存に失敗しました。"
+
+    return True, f"最新決算発表を更新しました（{updated} 件）。"
+
+
 def normalize_ticker(code: str | int | None) -> str | None:
     if code is None:
         return None
