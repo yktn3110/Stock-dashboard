@@ -29,12 +29,12 @@ def main():
     page = st.session_state[SESSION_KEY_PAGE]
 
     if page == "dashboard":
-        render_dashboard(df_list, df_q)
+        render_dashboard(df_list)
     elif page == "g1":
         render_g1(df_q)
     else:
         st.session_state[SESSION_KEY_PAGE] = DEFAULT_PAGE
-        render_dashboard(df_list, df_q)
+        render_dashboard(df_list)
 
 
 if __name__ == "__main__":

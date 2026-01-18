@@ -5,7 +5,7 @@ from config import SESSION_KEY_PAGE, SESSION_KEY_SELECTED_CODE
 from data_loader import get_current_price, normalize_ticker
 
 
-def render_dashboard(df_list, df_q):
+def render_dashboard(df_list):
     st.title("銘柄ダッシュボード")
 
     df_view = df_list.copy()
