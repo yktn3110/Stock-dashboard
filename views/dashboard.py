@@ -14,6 +14,11 @@ def render_dashboard(df_list):
             pd.to_datetime(df_view["最新決算発表"], errors="coerce")
             .dt.strftime("%Y/%m/%d")
         )
+    if "次回決算日" in df_view.columns:
+        df_view["次回決算日"] = (
+            pd.to_datetime(df_view["次回決算日"], errors="coerce")
+            .dt.strftime("%Y/%m/%d")
+        )
 
     st.subheader("銘柄一覧")
     table_selection = st.dataframe(
