@@ -1,3 +1,4 @@
+import pandas as pd
 import streamlit as st
 
 from config import SESSION_KEY_PAGE, SESSION_KEY_SELECTED_CODE
@@ -25,10 +26,13 @@ def render_dashboard(df_list, df_q):
         st.info("条件に合う銘柄がありません。フィルタを調整してください。")
         return
 
+    widget_key = "selected_code_widget"
+
     if table_selection and table_selection.selection.rows:
         row_idx = table_selection.selection.rows[0]
         selected_code_from_table = df_view.iloc[row_idx]["証券コード"]
         st.session_state[SESSION_KEY_SELECTED_CODE] = selected_code_from_table
+        st.session_state[widget_key] = selected_code_from_table
 
     codes = df_view["証券コード"].unique().tolist()
     if (
@@ -36,8 +40,11 @@ def render_dashboard(df_list, df_q):
         or st.session_state[SESSION_KEY_SELECTED_CODE] not in codes
     ):
         st.session_state[SESSION_KEY_SELECTED_CODE] = codes[0]
+    if widget_key not in st.session_state or st.session_state[widget_key] not in codes:
+        st.session_state[widget_key] = st.session_state[SESSION_KEY_SELECTED_CODE]
 
-    selected_code = st.selectbox("証券コード", codes, key=SESSION_KEY_SELECTED_CODE)
+    selected_code = st.selectbox("証券コード", codes, key=widget_key)
+    st.session_state[SESSION_KEY_SELECTED_CODE] = selected_code
 
     row = df_list[df_list["証券コード"] == selected_code].iloc[0]
     name = row.get("銘柄名", "")
